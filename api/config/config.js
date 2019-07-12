@@ -1,7 +1,13 @@
-import dotEnv from 'dotenv';
-
-dotEnv.config();
+require('custom-env').env(true);
 
 const port = process.env.PORT;
+const dbUrl = process.env.DATABASE_URL;
+const jwtKey = process.env.JWT_KEY;
 
-module.exports = port;
+const exportOut = {
+  port,
+  dbUrl,
+  jwtKey,
+};
+
+module.exports = exportOut;
