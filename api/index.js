@@ -2,9 +2,13 @@ import '@babel/polyfill';
 import morgan from 'morgan';
 import express from 'express';
 import bodyparser from 'body-parser';
-// import util from './utility';
 import config from './config';
 import user from './routes/user';
+
+import Auth from './utility';
+
+console.log('hashed admin password: ', Auth.hash(process.env.ADMIN_PASSWORD));
+console.log('hashed user password: ', Auth.hash(process.env.PASSWORD));
 
 const { port } = config;
 

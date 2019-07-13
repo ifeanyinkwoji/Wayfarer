@@ -13,6 +13,14 @@ class Auth {
   }
 
   /**
+   * @param {string} password provided password
+   * @param {string} hash hashed password in database
+   */
+  static compare(password, hash) {
+    return bcrypt.compareSync(password, hash);
+  }
+
+  /**
    * @description Generates access token
    * @param {object} payload User credential(s)
    * @param {string} secret encryption key

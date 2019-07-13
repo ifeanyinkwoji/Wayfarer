@@ -23,7 +23,7 @@ const seed = async () => {
   `;
 
     await pool.query(seedTables);
-    console.log('Tables seeded successfully!');
+    console.log('Seeded the tables successfully!');
   } catch (error) {
     console.log(error.message);
   }

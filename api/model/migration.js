@@ -6,8 +6,6 @@ const pool = new pg.Pool({
   connectionString: dbUrl,
 });
 
-console.log('database: ', dbUrl);
-
 const migration = async () => {
   try {
     const dropTables = `
@@ -22,7 +20,7 @@ const migration = async () => {
       email VARCHAR(128) UNIQUE NOT NULL,
       first_name VARCHAR(128) NOT NULL,
       last_name VARCHAR(128) NOT NULL,
-      password VARCHAR(128) NOT NULL,
+      password VARCHAR(256) NOT NULL,
       is_admin BOOLEAN DEFAULT false,
       created_on TIMESTAMP NOT NULL DEFAULT NOW()
     );
@@ -58,10 +56,10 @@ const migration = async () => {
     `;
 
     await pool.query(dropTables);
-    console.log('Tables dropped successfully!');
+    console.log('Dropped the tables successfully!');
 
     await pool.query(createTables);
-    console.log('Tables created successfully!');
+    console.log('Created the tables successfully!');
   } catch (error) {
     console.error(error.message);
   }
