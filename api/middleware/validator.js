@@ -48,4 +48,31 @@ Example: Oglocke245`,
 
     return joi.validate(user, schema);
   },
+
+  /**
+   * @description Validates all fields in signup request body
+   * @param {user} object
+   */
+  signinValidator(user) {
+    const schema = joi.object().keys({
+      email: joi
+        .string()
+        .trim()
+        .email()
+        .required()
+        .error(
+          () => `Please enter a valid email address.
+Example 1: "orlando@gmail.com"`,
+        ),
+      password: joi
+        .string()
+        .trim()
+        .required()
+        .error(
+          () => 'Please Input your password!',
+        ),
+    });
+
+    return joi.validate(user, schema);
+  },
 };

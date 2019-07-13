@@ -6,7 +6,7 @@
   "scripts": {
     "testing": "mocha ./api/test",
     "start:dev": "set DEBUG=dev && cross-env NODE_ENV=development babel-watch ./api/index.js",
-    "dev": "node ./api/model/migration migration &&nodemon --exec babel-node ./api/index.js",
+    "dev": "cross-env NODE_ENV=dev npm run migrate && cross-env NODE_ENV=dev nodemon --exec babel-node ./api/index.js",
     "start": "nodemon --exec babel-node ./api/index.js",
     "build": "babel ./api --out-dir ./build",
     "migrate": "node ./api/model/migration migration&&node ./api/model/seed seed",
