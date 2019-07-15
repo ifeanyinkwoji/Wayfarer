@@ -17,7 +17,7 @@ class Users {
     const { error } = validator.signupValidator(req.body);
     if (error) {
       return res.status(400).json({
-        status: 400,
+        status: 'error',
         error: error.details[0].message,
       });
     }
@@ -41,10 +41,8 @@ class Users {
         created_on,
       });
 
-      res.setHeader('Authorization', `Bearer ${token}`);
-
-      res.status(201).json({
-        status: 201,
+      return res.status(201).json({
+        status: 'success',
         data: {
           token,
           id,
@@ -56,14 +54,14 @@ class Users {
       });
     } catch (err) {
       if (err.routine === '_bt_check_unique') {
-        res.status(409).json({
-          status: 409,
+        return res.status(409).json({
+          status: 'error',
           error: `A user has already registered with this email!
 Please use another email`,
         });
       }
-      res.status(500).json({
-        status: 500,
+      return res.status(500).json({
+        status: 'error',
         error: 'Internal server error',
       });
     }
@@ -73,7 +71,7 @@ Please use another email`,
     const { error } = validator.signinValidator(req.body);
     if (error) {
       return res.status(400).json({
-        status: 400,
+        status: 'error',
         error: error.details[0].message,
       });
     }
@@ -84,13 +82,13 @@ Please use another email`,
       const data = await Users.Model().select(columns, clause);
       if (!data[0]) {
         return res.status(401).json({
-          status: 401,
+          status: 'error',
           error: 'Unauthorized access!',
         });
       }
       if (!Auth.compare(password, data[0].password)) {
         return res.status(401).json({
-          status: 401,
+          status: 'error',
           error: 'Unauthorized access!',
         });
       }
@@ -106,9 +104,9 @@ Please use another email`,
         created_on,
       };
       const token = Auth.generateToken({ ...payload });
-      res.setHeader('Authorization', `Bearer ${token}`);
+
       return res.status(200).json({
-        status: 200,
+        status: 'success',
         data: {
           token,
           id,
@@ -121,7 +119,7 @@ Please use another email`,
     } catch (err) {
       console.error(err);
       return res.status(500).json({
-        status: 500,
+        status: 'error',
         error: 'Internal server error',
       });
     }
