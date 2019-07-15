@@ -10,7 +10,7 @@
     "start": "nodemon --exec babel-node ./api/index.js",
     "build": "babel ./api --out-dir ./build",
     "migrate": "node ./api/model/migration migration&&node ./api/model/seed seed",
-    "test": "cross-env NODE_ENV=test npm run migrate && cross-env NODE_ENV=test nyc --reporter=text mocha --timeout 10000 -c ./api/test --require @babel/register --exit"
+    "test": "cross-env NODE_ENV=test npm run migrate && cross-env NODE_ENV=test nyc --reporter=text mocha --timeout 30000 -c ./api/test --require @babel/register --exit"
   },
   "keywords": [],
   "author": "Ifeanyi Nkwoji",
@@ -27,6 +27,7 @@
     "dotenv-expand": "^5.1.0",
     "express": "^4.17.1",
     "joi": "^14.3.1",
+    "joi-jwt": "^1.0.1",
     "jsonwebtoken": "^8.5.1",
     "moment": "^2.24.0",
     "path": "^0.12.7",
@@ -46,6 +47,9 @@
     "babel-watch": "^7.0.0",
     "chai": "^4.2.0",
     "chai-http": "^4.3.0",
+    "chai-jwt": "^2.0.0",
+    "chai-match": "^1.1.1",
+    "chai-uuid": "^1.0.6",
     "eslint": "^5.3.0",
     "eslint-config-airbnb-base": "^13.2.0",
     "eslint-plugin-import": "^2.17.2",

@@ -20,7 +20,7 @@ const migration = async () => {
       email VARCHAR(128) UNIQUE NOT NULL,
       first_name VARCHAR(128) NOT NULL,
       last_name VARCHAR(128) NOT NULL,
-      password VARCHAR(256) NOT NULL,
+      password VARCHAR(128) NOT NULL,
       is_admin BOOLEAN DEFAULT false,
       created_on TIMESTAMP NOT NULL DEFAULT NOW()
     );

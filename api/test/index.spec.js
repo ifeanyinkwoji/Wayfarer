@@ -17,7 +17,8 @@ describe('Home route', () => {
         const { body } = res;
         body.should.be.an('object');
         body.should.haveOwnProperty('status');
-        body.status.should.equal(200);
+        body.status.should.be.a('string');
+        body.status.should.equal('success');
         body.should.haveOwnProperty('data');
         const { data } = body;
         data.should.be.an('object');
