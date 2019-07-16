@@ -1,6 +1,5 @@
 import joiBase from '@hapi/joi';
 
-
 const joi = joiBase.extend(require('joi-jwt'));
 const config = require('../config');
 
@@ -78,42 +77,75 @@ Example 1: "orlando@gmail.com"`,
   },
 
   tripValidator(trip) {
-    const schema = joi
-      .object()
-      .keys({
-        bus_id: joi
-          .string()
-          .trim()
-          .required()
-          .guid({ version: 'uuidv4' })
-          .error(() => 'Please enter a valid bus id. The bus_id format shoud be "uuid version 4"'),
-        origin: joi
-          .string()
-          .trim()
-          .alphanum()
-          .min(2)
-          .max(30)
-          .required()
-          .error(() => 'Please enter the  origin. It should be alphanumerical with least 2 or at most 30 characters'),
-        destination: joi
-          .string()
-          .trim()
-          .alphanum()
-          .min(2)
-          .max(30)
-          .required()
-          .error(() => 'Please enter the  destination. It should be alphanumerical with at least 2 or at most 30 characters'),
-        fare: joi
-          .number()
-          .min(500)
-          .required()
-          .error(() => 'Please enter the fare. It should be at least 500'),
-        token: joi
-          .jwt()
-          .valid({ secret: config.jwtKey })
-          .required()
-          .error(() => 'Please enter a valid admin token'),
-      });
+    const schema = joi.object().keys({
+      bus_id: joi
+        .string()
+        .trim()
+        .required()
+        .guid({ version: 'uuidv4' })
+        .error(() => 'Please enter a valid bus id. The bus_id format shoud be "uuid version 4"'),
+      origin: joi
+        .string()
+        .trim()
+        .alphanum()
+        .min(2)
+        .max(30)
+        .required()
+        .error(
+          () => 'Please enter the  origin. It should be alphanumerical with least 2 or at most 30 characters',
+        ),
+      destination: joi
+        .string()
+        .trim()
+        .alphanum()
+        .min(2)
+        .max(30)
+        .required()
+        .error(
+          () => 'Please enter the  destination. It should be alphanumerical with at least 2 or at most 30 characters',
+        ),
+      fare: joi
+        .number()
+        .min(500)
+        .required()
+        .error(() => 'Please enter the fare. It should be at least 500'),
+      token: joi
+        .jwt()
+        .valid({ secret: config.jwtKey })
+        .required()
+        .error(() => 'Please enter a valid admin token'),
+    });
+
+    return joi.validate(trip, schema, { abortEarly: false });
+  },
+
+  bookTripValidator(trip) {
+    const schema = joi.object().keys({
+      trip_id: joi
+        .string()
+        .trim()
+        .required()
+        .guid({ version: 'uuidv4' })
+        .error(() => 'Please enter a valid trip id. The trip_id format shoud be "uuid version 4"'),
+      seat_number: joi
+        .number()
+        .integer()
+        .required()
+        .error(
+          () => 'Please enter the  seat number',
+        ),
+      token: joi
+        .jwt()
+        .valid({ secret: config.jwtKey })
+        .required()
+        .error(() => 'Please enter a valid admin token'),
+      user_id: joi
+        .string()
+        .trim()
+        .required()
+        .guid({ version: 'uuidv4' })
+        .error(() => 'Please enter a valid user id. The user_id format shoud be "uuid version 4"'),
+    });
 
     return joi.validate(trip, schema, { abortEarly: false });
   },

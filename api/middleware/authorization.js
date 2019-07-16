@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import Auth from '../utility';
 
 /**
@@ -38,10 +39,11 @@ class Authorization {
    * @param {object} res response object
    * @returns {boolean} returns true or false for user verification
    */
-  static verifyUser(req, res, next) {
+  static async verifyUser(req, res, next) {
     try {
       const { token } = req.body;
-      const decoded = Auth.verifyToken(token);
+      const decoded = await Auth.verifyToken(token);
+      req.user = decoded;
       if (!decoded.id) {
         return res.status(403).json({
           status: 'error',

@@ -27,7 +27,7 @@ class Auth {
    * @param {string} duration token expiry time
    * @returns {string} Access token
    */
-  static generateToken(payload, secret = jwtKey, duration = '40d') {
+  static generateToken(payload, secret = jwtKey, duration = '5d') {
     return jwt.sign(payload, secret, { expiresIn: duration });
   }
 

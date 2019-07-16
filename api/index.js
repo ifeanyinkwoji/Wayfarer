@@ -32,6 +32,7 @@ app.disable('x-powered-by');
  */
 app.use('/api/v1', routes.user);
 app.use('/api/v1', routes.trip);
+app.use('/api/v1', routes.booking);
 
 // Handle non-existent route with with a proper message
 app.all('*', (req, res) => {
