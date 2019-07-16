@@ -22,7 +22,7 @@ class Model {
   }
 
   async select(columns, clause) {
-    const query = `SELECT ${columns} FROM ${this.table} ${clause}`;
+    const query = `SELECT ${columns} FROM ${this.table} ${clause};`;
     const data = await this.pool.query(query);
     return data.rows;
   }

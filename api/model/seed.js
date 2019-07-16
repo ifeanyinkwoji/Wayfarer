@@ -23,7 +23,16 @@ const seed = async () => {
   `;
 
     await pool.query(seedTables);
-    console.log('Seeded the tables successfully!');
+    await console.log('Seeded the tables successfully!');
+
+    const results = await pool.query('SELECT * FROM buses');
+    const buses = await results.rows;
+
+    const seeds = await `INSERT INTO trips (bus_id, origin, destination, fare) VALUES ('${buses[0].id}', 'Damos', 'El Dorado', 1200);
+    INSERT INTO trips (bus_id, origin, destination, fare) VALUES ('${buses[1].id}', 'Olympus', 'Atlantis', 2300);
+    INSERT INTO trips (bus_id, origin, destination, fare) VALUES ('${buses[2].id}', 'Orile', 'New York', 2500);`;
+
+    await pool.query(seeds);
   } catch (error) {
     console.log(error.message);
   }

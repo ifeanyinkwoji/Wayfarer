@@ -22,8 +22,8 @@ class Users {
       });
     }
     const {
- first_name, last_name, email, password 
-} = req.body;
+      first_name, last_name, email, password,
+    } = req.body;
     const hashedP = Auth.hash(password);
     const columns = 'first_name, last_name, email, password';
     const values = `'${first_name}', '${last_name}', '${email}', '${hashedP}'`;
@@ -31,14 +31,11 @@ class Users {
 
     try {
       const data = await Users.Model().insert(columns, values, clause);
-      const { id, is_admin, created_on } = data[0];
+      const { id, is_admin } = data[0];
       const token = Auth.generateToken({
         id,
         email,
-        first_name,
-        last_name,
         is_admin,
-        created_on,
       });
 
       return res.status(201).json({
@@ -93,17 +90,15 @@ Please use another email`,
         });
       }
       const {
- id, email, first_name, last_name, is_admin, created_on 
-} = data[0];
-      const payload = {
+        id, email, first_name, last_name, is_admin,
+      } = data[0];
+
+      const token = Auth.generateToken({
         id,
         email,
-        first_name,
-        last_name,
         is_admin,
-        created_on,
-      };
-      const token = Auth.generateToken({ ...payload });
+      });
+
 
       return res.status(200).json({
         status: 'success',
