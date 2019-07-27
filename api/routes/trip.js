@@ -1,13 +1,14 @@
-import express from 'express';
-import Trips from '../controller/trip';
+import { Router } from 'express';
+import { Trips } from '../controller';
 import Authorization from '../middleware/authorization';
 
-const router = express.Router();
+const router = Router();
 
-/**
- * Admin can create trips
- */
-router.post('/trips', Authorization.verifyAdmin, Trips.createTrip);
-router.get('/trips', Authorization.verifyUser, Trips.getAllTrips);
+const { createTrip, getTrips } = Trips;
+const { verifyAdmin, verifyUser } = Authorization;
 
-module.exports = router;
+router.post('/', verifyAdmin, createTrip);
+
+router.get('/', verifyUser, getTrips);
+
+export default router;

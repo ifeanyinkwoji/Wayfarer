@@ -1,156 +1,158 @@
-import model from '../model';
-import freeSeats from '../helper/seats';
-import validator from '../middleware/validator';
+import { Model } from '../model';
+import getFreeSeats from '../helper';
+import {
+  resConflict,
+  resInternalServer,
+  resSuccess,
+  resNull,
+  resBadRequest,
+} from '../utility/response';
+import Validator from '../middleware/validator';
 
-/**
- * @description describes the methods for all booking endpoints
- */
+const { bookTripValidator, getTripValidator } = Validator;
+
 class Bookings {
-  /**
-   * @description Creates the bookings, trips,
-   * users and buses Model instance
-   */
-  static bookModel() {
-    return new model.Model('bookings');
+  static busModel() {
+    return new Model('buses');
   }
 
   static tripModel() {
-    return new model.Model('trips');
+    return new Model('trips');
+  }
+
+  static bookModel() {
+    return new Model('bookings');
   }
 
   static userModel() {
-    return new model.Model('users');
+    return new Model('users');
   }
 
-  static busModel() {
-    return new model.Model('buses');
-  }
-
-  /**
-   * @description Creates a booking on a trip
-   * @param {object} req request object
-   * @param {object} res response object
-   * @returns {object} JSON response
-   */
   static async bookTrip(req, res) {
-    const { error } = validator.bookTripValidator(req.body);
+    const { error } = bookTripValidator(req.body);
     if (error) {
-      return res.status(400).json({
-        status: 'error',
-        error: error.details[0].message,
-      });
+      const errMessage = error.details.map(err => `${err.path}: ${err.message}`).join('\n');
+      return resBadRequest(res, errMessage);
     }
 
     let { trip_id, seat_number } = req.body;
     const { id, email } = req.user;
     seat_number = Number(seat_number);
-    const tripColumns = 'id, bus_id, trip_date';
-    const bookClause = `WHERE trip_id='${trip_id}'`;
-    const idEqTripId = `WHERE id='${trip_id}'`;
-
-    const idEqId = `WHERE id='${id}'`;
-    const seatClause = `WHERE trip_id='${trip_id}' AND seat_number=${seat_number}`;
-    const mbColumns = 'trip_id, user_id, seat_number';
-    const mbValues = `'${trip_id}','${id}', ${seat_number}`;
-    const mbClause = 'RETURNING id, trip_id, user_id, seat_number';
+    trip_id = Number(trip_id);
+    const tripCols = 'id, bus_id, trip_date';
+    const bookClause = `WHERE trip_id=${trip_id}`;
+    let seatClause = `WHERE trip_id=${trip_id} AND seat_number=${seat_number}`;
+    const newBookingsCols = 'trip_id, user_id, seat_number';
+    let newBookingsValues = `${trip_id}, ${id}, ${seat_number}`;
+    const newBookingsClause = 'RETURNING id, trip_id, user_id, seat_number';
     const userColumn = 'first_name, last_name';
-
 
     try {
       // Check if the trip exists
-
-      const trip = await Bookings.tripModel().select(tripColumns, idEqTripId);
-      if (!trip[0]) {
-        return res.status(404).json({
-          status: 'error',
-          error: 'This trip is unavailable',
-        });
+      const tripExist = await Bookings.tripModel().select(tripCols, `WHERE id=${trip_id}`);
+      if (!tripExist[0]) {
+        return resNull(res, 'Trip is unavailable');
       }
-      const { bus_id, trip_date } = trip[0];
-      const idEqBusId = `WHERE id='${bus_id}'`;
-      const bookExists = await Bookings.bookModel().select('*', bookClause);
+      const { bus_id, trip_date } = tripExist[0];
 
-      const booked = bookExists.find(el => el.user_id === id);
-      if (booked) {
-        return res.status(409).json({
-          status: 'error',
-          error: 'You are already booked for this trip',
-        });
+      // Confirm the uniqueness of the booking
+      const bookingsForThisTrip = await Bookings.bookModel().select('*', bookClause);
+      const prevBooked = bookingsForThisTrip.find(booking => booking.user_id === id);
+      if (prevBooked) {
+        return resConflict(res, 'You are already booked for this trip');
       }
-      const user = await Bookings.userModel().select(userColumn, idEqId);
 
+      if (Number.isNaN(seat_number)) {
+        // Get all booked seats
+        const bookedSeats = bookingsForThisTrip.map(book => book.seat_number);
+        // Get the capacity of the bus used for this trip
+        const busCapacity = await Bookings.busModel().select('capacity', `WHERE id=${bus_id}`);
+        const { capacity } = busCapacity[0];
+        // Get the number of free seats available on a bus for this trip
+        const freeSeats = getFreeSeats(bookedSeats, capacity);
+        if (freeSeats.length === 0) {
+          return resNull(res, 'There is no free seat on this bus.');
+        }
+        seat_number = freeSeats.shift();
+
+        seatClause = `WHERE trip_id=${trip_id} AND seat_number=${seat_number}`;
+        newBookingsValues = `${trip_id}, ${id}, ${seat_number}`;
+      }
+
+      // Check if the seat is available
+      const seatAvailable = await Bookings.bookModel().select('*', seatClause);
+      if (!prevBooked && seatAvailable[0]) {
+        // Get all booked seats
+        const bookedSeats = bookingsForThisTrip.map(book => book.seat_number);
+        // Get the capacity of the bus used for this trip
+        const busCapacity = await Bookings.busModel().select('capacity', `WHERE id=${bus_id}`);
+        const { capacity } = busCapacity[0];
+        // Get the number of free seats available on a bus for this trip
+        const freeSeats = getFreeSeats(bookedSeats, capacity);
+        if (freeSeats.length === 0) {
+          return resNull(res, 'There is no free seat on this bus.');
+        }
+        return resConflict(
+          res,
+          `This seat is already booked. Available seat(s): (${freeSeats.join(', ')})`,
+        );
+      }
+      // Get first_name and last_name
+      const user = await Bookings.userModel().select(userColumn, `WHERE id=${id}`);
       const { first_name, last_name } = user[0];
-      switch (false) {
-        case !seat_number: {
-          const seatExists = await Bookings.bookModel().select('*', seatClause);
-          if (!booked && seatExists[0]) {
-            const occupiedSeats = bookExists.map(book => book.seat_number);
-            const busCap = await Bookings.busModel().select('capacity', idEqBusId);
-            const { capacity } = busCap[0];
-            const availableSeats = freeSeats(occupiedSeats, capacity);
-            if (availableSeats.length === 0) {
-              return res.status(404).json({
-                status: 'error',
-                error: 'All the seats on this trip are already booked',
-              });
-            }
-            return res.status(409).json({
-              status: 'error',
-              error: `Seat is already booked. Available seat(s): (${availableSeats.join(', ')})`,
-            });
-          }
-          const booking = await Bookings.bookModel().insert(mbColumns, mbValues, mbClause);
-          const data = {
-            id: booking[0].id,
-            user_id: id,
-            trip_id,
-            bus_id,
-            trip_date,
-            seat_number,
-            first_name,
-            last_name,
-            email,
-          };
-          return res.status(201).json({
-            status: 'success',
-            data,
-          });
-        }
-
-        default: {
-          const seats = await Bookings.bookModel().select(
-            'seat_number',
-            `WHERE trip_id='${trip_id}'`,
-          );
-          seat_number = seats.length + 1;
-          const defaultValues = `'${trip_id}','${id}', ${seat_number}`;
-          const booking = await Bookings.bookModel().insert(mbColumns, defaultValues, mbClause);
-          const data = {
-            id: booking[0].id,
-            user_id: id,
-            trip_id,
-            bus_id,
-            trip_date,
-            seat_number,
-            first_name,
-            last_name,
-            email,
-          };
-
-          return res.status(201).json({
-            status: 'success',
-            data,
-          });
-        }
-      }
+      const booking = await Bookings.bookModel().insert(
+        newBookingsCols,
+        newBookingsValues,
+        newBookingsClause,
+      );
+      const data = {
+        booking_id: booking[0].id,
+        user_id: id,
+        trip_id,
+        bus_id,
+        trip_date,
+        seat_number,
+        first_name,
+        last_name,
+        email,
+      };
+      return resSuccess(res, 201, data);
     } catch (err) {
-      console.log(err.stack);
-      return res.status(500).json({
-        status: 'error',
-        error: 'Internal server error',
-      });
+      return resInternalServer(res);
+    }
+  }
+
+  static async getBookings(req, res) {
+    const { error } = getTripValidator(req.body);
+    if (error) {
+      const errMessage = error.details.map(err => `${err.path}: ${err.message}`).join('\n');
+      return resBadRequest(res, errMessage);
+    }
+
+    const { id, is_admin } = req.user;
+    const columns = `b.id AS booking_id, trip_id, user_id, seat_number, 
+    bus_id, trip_date, first_name, last_name, email`;
+    const clause = `b
+    inner join trips t ON t.id = trip_id
+    inner join users u ON u.id = user_id`;
+
+    try {
+      if (!is_admin) {
+        const data = await Bookings.bookModel().select(columns, `${clause} WHERE user_id=${id}`);
+        if (!data[0]) {
+          return resNull(res, 'You are not currently booked on any active trip.');
+        }
+        return resSuccess(res, 200, data);
+      }
+      const data = await Bookings.bookModel().select(columns, clause);
+      if (!data[0]) {
+        return resNull(res, 'There is, currently, no active booking on any trip.');
+      }
+      return resSuccess(res, 200, data);
+    } catch (err) {
+      return resInternalServer(res);
     }
   }
 }
 
-module.exports = Bookings;
+export default Bookings;

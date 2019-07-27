@@ -1,7 +1,7 @@
 import chai from 'chai';
 import assert from 'assert';
 import request from 'supertest';
-import app from '../';
+import app from '..';
 
 const { expect } = chai;
 const should = chai.should();
@@ -24,7 +24,7 @@ describe('Home route', () => {
         data.should.be.an('object');
         data.should.haveOwnProperty('message');
         data.message.should.equal('Welcome to Wayfarer');
- 
+
         done();
       })
       .catch(err => done(err));

@@ -1,3 +1,4 @@
 import Auth from './auth';
+import log from './log';
 
-module.exports = Auth;
+export { Auth, log };

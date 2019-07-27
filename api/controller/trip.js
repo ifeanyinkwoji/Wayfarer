@@ -1,86 +1,72 @@
-import model from '../model';
-import validator from '../middleware/validator';
+import { Model } from '../model';
+import {
+  resConflict,
+  resInternalServer,
+  resSuccess,
+  resNull,
+  resBadRequest,
+} from '../utility/response';
+import Validator from '../middleware/validator';
+
+const { tripValidator } = Validator;
 
 class Trips {
   static tripModel() {
-    return new model.Model('trips');
+    return new Model('trips');
   }
 
   static busModel() {
-    return new model.Model('buses');
+    return new Model('buses');
   }
 
   static async createTrip(req, res) {
-    console.log(req.body.token);
-    const { error } = validator.tripValidator(req.body);
+    const { error } = tripValidator(req.body);
     if (error) {
-      return res.status(400).json({
-        status: 'error',
-        error: error.details[0].message,
-      });
+      const errMessage = error.details.map(err => `${err.path}: ${err.message}`).join('\n');
+      return resBadRequest(res, errMessage);
     }
-    const {
-      bus_id, origin, destination, fare,
-    } = req.body;
-    const tripColumns = 'bus_id, origin, destination, status';
-    const tripClause = `WHERE bus_id='${bus_id}'`;
+    const { bus_id, origin, destination, fare } = req.body;
+    const tripCols = 'bus_id, origin, destination, status';
+    const tripClause = `WHERE bus_id=${bus_id}`;
     const columns = 'bus_id, origin, destination, fare';
-    const values = `'${bus_id}', '${origin}', '${destination}', ${fare}`;
+    const values = `${bus_id}, '${origin}', '${destination}', ${fare}`;
     const clause = 'RETURNING *';
 
     try {
-      const availableBus = await Trips.busModel().select('*', `WHERE id='${bus_id}'`);
-      if (!availableBus[0]) {
-        return res.status(404).json({
-          status: 'error',
-          error: 'No bus with this id is found',
-        });
+      const busExist = await Trips.busModel().select('*', `WHERE id=${bus_id}`);
+      if (!busExist[0]) return resNull(res, 'The bus does not exist on our database');
+      const tripWithBusIdExist = await Trips.tripModel().select(tripCols, tripClause);
+      if (tripWithBusIdExist[0] && tripWithBusIdExist[0].status === 'active') {
+        return resConflict(res, 'The bus is unavailable');
       }
-      const tripExist = await Trips.tripModel().select(tripColumns, tripClause);
-      console.log(tripExist);
-      if (tripExist[0] && tripExist[0].status === 'active') {
-        return res.status(409).json({
-          status: 'error',
-          error: 'This trip has already been created',
-        });
-      }
-      const createTrip = await Trips.tripModel().insert(columns, values, clause);
-      const data = { ...createTrip[0] };
-      data.fare = parseFloat(data.fare).toFixed(2);
-      return res.status(201).json({
-        status: 'success',
-        data,
-      });
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({
-        status: 'error',
-        error: 'Internal server error',
-      });
+      const makeTrip = await Trips.tripModel().insert(columns, values, clause);
+      return resSuccess(res, 201, { ...makeTrip[0] });
+    } catch (errors) {
+      return resInternalServer(res);
     }
   }
 
-  static async getAllTrips(req, res) {
+  static async getTrips(req, res) {
     try {
-      const data = await Trips.tripModel().select('*');
-      if (!data[0]) {
-        return res.status(404).json({
-          status: 'error',
-          error: 'There is no available trip',
-        });
+      const { origin, destination } = req.query;
+      if (origin) {
+        const data = await Trips.tripModel().select('*', `WHERE origin='${origin}'`);
+        if (!data[0]) return resNull(res, 'There is no available trip from this location');
+        return resSuccess(res, 200, data);
+      }
+      if (destination) {
+        const data = await Trips.tripModel().select('*', `WHERE destination='${destination}'`);
+        if (!data[0]) return resNull(res, 'There is no available trip to this destination');
+        return resSuccess(res, 200, data);
       }
 
-      return res.status(200).json({
-        status: 'success',
-        data,
-      });
+      const data = await Trips.tripModel().select('*');
+      if (!data[0]) return resNull(res, 'There is no available trip');
+      return resSuccess(res, 200, data);
     } catch (error) {
-      return res.status(500).json({
-        status: 'error',
-        error: 'Internal server error',
-      });
+      return resInternalServer(res);
     }
   }
 }
 
-module.exports = Trips;
+export default Trips;

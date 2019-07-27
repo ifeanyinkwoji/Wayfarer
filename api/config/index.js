@@ -1,5 +1,25 @@
-import config from './config';
+import {
+  port,
+  dbUrl,
+  jwtKey,
+  userEmail,
+  userPassword,
+  adminEmail,
+  adminPassword,
+  busCap,
+  user2Email,
+  nodeEnv,
+} from './config';
 
-module.exports = {
-  ...config,
+export {
+  port,
+  dbUrl,
+  jwtKey,
+  userEmail,
+  userPassword,
+  adminEmail,
+  adminPassword,
+  busCap,
+  user2Email,
+  nodeEnv,
 };

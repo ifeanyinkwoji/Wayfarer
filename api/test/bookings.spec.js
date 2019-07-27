@@ -1,231 +1,396 @@
 import chai from 'chai';
-import chaiUUID from 'chai-uuid';
+import chaiJWT from 'chai-jwt';
+import chaiMATCH from 'chai-match';
+import moment from 'moment';
 import assert from 'assert';
 import request from 'supertest';
-import chaiJsonSchema from 'chai-json-schema';
-import { Pool } from 'pg';
-import app from '..';
-import config from '../config';
+import { pool } from '../model';
 
-chai.use(chaiJsonSchema);
-chai.use(chaiUUID);
+import app from '..';
+import {
+  adminEmail, adminPassword, userEmail, user2Email, userPassword, jwtKey,
+} from '../config';
+
+chai.use(chaiJWT);
+chai.use(chaiMATCH);
 const should = chai.should();
 
-const { dbUrl } = config;
+moment().format();
 
-const pool = new Pool({
-  connectionString: dbUrl,
+const admin = {
+  email: adminEmail,
+  password: adminPassword,
+};
+
+const user = {
+  email: userEmail,
+  password: userPassword,
+};
+
+const user2 = {
+  email: user2Email,
+  password: userPassword,
+};
+
+let adminToken;
+let userToken;
+let user2Token;
+
+describe('POST /bookings', () => {
+  before('Get user token for the test', (done) => {
+    request(app)
+      .post('/api/v1/auth/signin')
+      .send(user)
+      .end((err, res) => {
+        userToken = res.body.data.token;
+
+        done();
+      });
+  });
+
+  before('Get user2 token for the test', (done) => {
+    request(app)
+      .post('/api/v1/auth/signin')
+      .send(user2)
+      .end((err, res) => {
+        user2Token = res.body.data.token;
+
+        done();
+      });
+  });
+
+  it('should successfully book a trip without specifying a seat number', (done) => {
+    const newBooking = {
+      trip_id: 1,
+    };
+    request(app)
+      .post('/api/v1/bookings')
+      .send(newBooking)
+      .set('Authorization', `Bearer ${userToken}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.status.should.equal(201);
+        res.body.should.be.an('object');
+        res.body.should.haveOwnProperty('status');
+        res.body.should.haveOwnProperty('data');
+        const { data } = res.body;
+        res.body.status.should.be.a('string');
+        res.body.status.should.be.equal('success');
+        data.should.be.an('object');
+        data.should.haveOwnProperty('booking_id');
+        data.should.haveOwnProperty('user_id');
+        data.should.haveOwnProperty('trip_id');
+        data.should.haveOwnProperty('bus_id');
+        data.should.haveOwnProperty('trip_date');
+        data.should.haveOwnProperty('seat_number');
+        data.should.haveOwnProperty('first_name');
+        data.should.haveOwnProperty('last_name');
+        data.should.haveOwnProperty('email');
+        const {
+          booking_id,
+          user_id,
+          trip_id,
+          bus_id,
+          trip_date,
+          seat_number,
+          first_name,
+          last_name,
+          email,
+        } = data;
+
+        booking_id.should.be.a('number');
+        user_id.should.be.a('number');
+        trip_id.should.be.a('number');
+        bus_id.should.be.a('number');
+        trip_date.should.be.a('string');
+        moment()
+          .isValid(trip_date)
+          .should.equal(true);
+        first_name.should.be.a('string');
+        last_name.should.be.a('string');
+        email.should.be.a('string');
+        email.should.match(
+          /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+        );
+
+        done();
+      });
+  });
+
+  it('should successfully book a trip with user specifying a seat number', (done) => {
+    const newBooking = {
+      trip_id: 2,
+      seat_number: 1,
+    };
+    request(app)
+      .post('/api/v1/bookings')
+      .send(newBooking)
+      .set('Authorization', `Bearer ${userToken}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.status.should.equal(201);
+        res.body.should.be.an('object');
+        res.body.should.haveOwnProperty('status');
+        res.body.should.haveOwnProperty('data');
+        const { data } = res.body;
+        res.body.status.should.be.a('string');
+        res.body.status.should.be.equal('success');
+        data.should.be.an('object');
+        data.should.haveOwnProperty('booking_id');
+        data.should.haveOwnProperty('user_id');
+        data.should.haveOwnProperty('trip_id');
+        data.should.haveOwnProperty('bus_id');
+        data.should.haveOwnProperty('trip_date');
+        data.should.haveOwnProperty('seat_number');
+        data.should.haveOwnProperty('first_name');
+        data.should.haveOwnProperty('last_name');
+        data.should.haveOwnProperty('email');
+        const {
+          booking_id,
+          user_id,
+          trip_id,
+          bus_id,
+          trip_date,
+          seat_number,
+          first_name,
+          last_name,
+          email,
+        } = data;
+
+        booking_id.should.be.a('number');
+        user_id.should.be.a('number');
+        trip_id.should.be.a('number');
+        bus_id.should.be.a('number');
+        trip_date.should.be.a('string');
+        moment()
+          .isValid(trip_date)
+          .should.equal(true);
+        first_name.should.be.a('string');
+        last_name.should.be.a('string');
+        email.should.be.a('string');
+        email.should.match(
+          /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+        );
+
+        done();
+      });
+  });
+
+  it('should throw error if seat is already booked by another user', (done) => {
+    const newBooking = {
+      trip_id: 2,
+      seat_number: 1,
+    };
+    request(app)
+      .post('/api/v1/bookings')
+      .send(newBooking)
+      .set('Authorization', `Bearer ${user2Token}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.status.should.equal(409);
+        res.body.should.be.an('object');
+        res.body.should.haveOwnProperty('status');
+        res.body.should.haveOwnProperty('error');
+        const { status, error } = res.body;
+        status.should.be.a('string');
+        status.should.be.equal('error');
+        error.should.be.a('string');
+        error.should.match(/This seat is already booked. Available seat\(s\): \((\d\,\s)*/);
+
+        done();
+      });
+  });
+
+  it('should throw error if user is booked on same trip', (done) => {
+    const newBooking = {
+      trip_id: 2,
+      seat_number: 1,
+    };
+    request(app)
+      .post('/api/v1/bookings')
+      .send(newBooking)
+      .set('Authorization', `Bearer ${userToken}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.status.should.equal(409);
+        res.body.should.be.an('object');
+        res.body.should.haveOwnProperty('status');
+        res.body.should.haveOwnProperty('error');
+        const { status, error } = res.body;
+        status.should.be.a('string');
+        status.should.be.equal('error');
+        error.should.be.a('string');
+        error.should.equal('You are already booked for this trip');
+
+        done();
+      });
+  });
+
+  it('should throw error if trip_id is not specified', (done) => {
+    const newBooking = {
+      seat_number: 11,
+    };
+    request(app)
+      .post('/api/v1/bookings')
+      .send(newBooking)
+      .set('Authorization', `Bearer ${userToken}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.status.should.equal(400);
+        res.body.should.be.an('object');
+        res.body.should.haveOwnProperty('status');
+        res.body.should.haveOwnProperty('error');
+        const { status, error } = res.body;
+        status.should.be.a('string');
+        status.should.be.equal('error');
+        error.should.be.a('string');
+        error.should.equal('trip_id: Please enter a valid bus id. The trip_id should be an integer that equals 1 or is greater.');
+
+        done();
+      });
+  });
+
+  it('should throw error if seat_number is of the wrong format', (done) => {
+    const newBooking = {
+      trip_id: 2,
+      seat_number: 'one',
+    };
+    request(app)
+      .post('/api/v1/bookings')
+      .send(newBooking)
+      .set('Authorization', `Bearer ${userToken}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.status.should.equal(400);
+        res.body.should.be.an('object');
+        res.body.should.haveOwnProperty('status');
+        res.body.should.haveOwnProperty('error');
+        const { status, error } = res.body;
+        status.should.be.a('string');
+        status.should.be.equal('error');
+        error.should.be.a('string');
+        error.should.equal('seat_number: Please enter the  seat number. The seat number should be an integer that equals 1 or is greater.');
+
+        done();
+      });
+  });
 });
 
-describe('user books a trip test suite', () => {
-  pool.connect();
-  let token;
-  before('Get user token', async () => {
-    const res = await request(app)
+describe('GET /bookings', () => {
+  before('Get adminToken for the test', (done) => {
+    request(app)
       .post('/api/v1/auth/signin')
-      .send({ email: config.user, password: config.userPassword })
-      .catch((errors) => {
-        console.error(errors);
-        throw errors;
+      .send(admin)
+      .end((err, res) => {
+        adminToken = res.body.data.token;
+
+        done();
       });
-    token = await res.body.data.token;
   });
 
-  it('should create a trip', async () => {
-    let trip_id;
-    let newBooking;
-    let user_id;
-    const seat_number = 16;
-    try {
-      const results = await pool.query('SELECT * FROM trips');
-      user_id = await pool.query('SELECT * FROM users')[0].id;
-      trip_id = await results.rows[0].id;
-      newBooking = {
-        token,
-        trip_id,
-        seat_number,
-        user_id,
-      };
-    } catch (e) {
-      return console.error(e);
-    }
+  it('should successfully get all bookings', () => {
+    request(app)
+      .get('/api/v1/bookings')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.status.should.equal(200);
+        res.body.should.be.an('object');
+        res.body.should.haveOwnProperty('status');
+        res.body.should.haveOwnProperty('data');
+        const { data } = res.body;
+        res.body.status.should.be.a('string');
+        res.body.status.should.be.equal('success');
+        data.should.be.an('array');
+        const pos = parseInt(Math.random() * data.length, 10);
+        data[pos].should.haveOwnProperty('booking_id');
+        data[pos].should.haveOwnProperty('user_id');
+        data[pos].should.haveOwnProperty('trip_id');
+        data[pos].should.haveOwnProperty('bus_id');
+        data[pos].should.haveOwnProperty('trip_date');
+        data[pos].should.haveOwnProperty('seat_number');
+        data[pos].should.haveOwnProperty('first_name');
+        data[pos].should.haveOwnProperty('last_name');
+        data[pos].should.haveOwnProperty('email');
+        const {
+          booking_id,
+          user_id,
+          trip_id,
+          bus_id,
+          trip_date,
+          seat_number,
+          first_name,
+          last_name,
+          email,
+        } = data[pos];
 
-    res
-      .post('/api/v1/bookings')
-      .send(newBooking);
-
-    console.log(resp.body);
-
-    /* resp.status.should.equal(201);
-    resp.body.should.haveOwnProperty('status');
-    resp.body.status.should.be.a('string');
-    resp.body.status.should.equal('success');
-    resp.body.should.haveOwnProperty('data');
-    const { data } = resp.body;
-    data.should.be.an('object');
-    data.should.haveOwnProperty('id');
-    data.id.should.be.a('string');
-    data.id.should.be.a.uuid('v4');
-    data.should.haveOwnProperty('bus_id');
-    data.bus_id.should.be.a('string');
-    data.bus_id.should.be.a.uuid('v4');
-    data.should.haveOwnProperty('origin');
-    data.origin.should.be.a('string');
-    data.should.haveOwnProperty('destination');
-    data.destination.should.be.a('string');
-    data.should.haveOwnProperty('trip_date');
-    data.trip_date.should.be.a('string');
-    data.should.haveOwnProperty('fare');
-    data.should.haveOwnProperty('status');
-    data.status.should.be.a('string');
-    data.status.should.equal('active'); */
+        booking_id.should.be.a('number');
+        user_id.should.be.a('number');
+        trip_id.should.be.a('number');
+        bus_id.should.be.a('number');
+        trip_date.should.be.a('string');
+        moment()
+          .isValid(trip_date)
+          .should.equal(true);
+        first_name.should.be.a('string');
+        last_name.should.be.a('string');
+        email.should.be.a('string');
+        email.should.match(
+          /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+        );
+      });
   });
 
-  /* it('should fail to create a trip: "invalid token error"', async () => {
-    let bus_id;
-    let newTrip;
-    try {
-      const results = await pool.query('SELECT * FROM buses');
-      bus_id = await results.rows[0].id;
-      newTrip = await {
-        token: `${adminToken}MyNameisSLimShady`,
-        bus_id,
-        origin: 'Hell',
-        destination: 'Heaven',
-        fare: 7000,
-      };
-    } catch (e) {
-      return console.error(e);
-    }
+  it('should successfully get all bookings for a particular user', () => {
+    request(app)
+      .get('/api/v1/bookings')
+      .set('Authorization', `Bearer ${userToken}`)
+      .end((err, res) => {
+        should.not.exist(err);
+        res.status.should.equal(200);
+        res.body.should.be.an('object');
+        res.body.should.haveOwnProperty('status');
+        res.body.should.haveOwnProperty('data');
+        const { data } = res.body;
+        res.body.status.should.be.a('string');
+        res.body.status.should.be.equal('success');
+        data.should.be.an('array');
+        const pos = parseInt(Math.random() * data.length, 10);
+        data[pos].should.haveOwnProperty('booking_id');
+        data[pos].should.haveOwnProperty('user_id');
+        data[pos].should.haveOwnProperty('trip_id');
+        data[pos].should.haveOwnProperty('bus_id');
+        data[pos].should.haveOwnProperty('trip_date');
+        data[pos].should.haveOwnProperty('seat_number');
+        data[pos].should.haveOwnProperty('first_name');
+        data[pos].should.haveOwnProperty('last_name');
+        data[pos].should.haveOwnProperty('email');
+        const {
+          booking_id,
+          user_id,
+          trip_id,
+          bus_id,
+          trip_date,
+          seat_number,
+          first_name,
+          last_name,
+          email,
+        } = data[pos];
 
-    const resp = await request(app)
-      .post('/api/v1/trips')
-      .send(newTrip);
-
-    resp.status.should.equal(401);
-    resp.body.should.haveOwnProperty('status');
-    resp.body.status.should.be.a('string');
-    resp.body.status.should.equal('error');
-    resp.body.should.haveOwnProperty('error');
-    resp.body.error.should.be.a('string');
-    resp.body.error.should.equal('Invalid token');
+        booking_id.should.be.a('number');
+        user_id.should.be.a('number');
+        trip_id.should.be.a('number');
+        bus_id.should.be.a('number');
+        trip_date.should.be.a('string');
+        moment()
+          .isValid(trip_date)
+          .should.equal(true);
+        first_name.should.be.a('string');
+        last_name.should.be.a('string');
+        email.should.be.a('string');
+        email.should.match(
+          /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+        );
+      });
   });
-
-  it('should fail to create a trip: "Invalid bus id"', async () => {
-    const newTrip = await {
-      token: adminToken,
-      bus_id: 'khosjlmlkk ;lkdgkf;gk;fl;dj;',
-      origin: 'Hell',
-      destination: 'Heaven',
-      fare: 7000,
-    };
-
-    const resp = await request(app)
-      .post('/api/v1/trips')
-      .send(newTrip);
-
-    resp.status.should.equal(400);
-    resp.body.should.haveOwnProperty('status');
-    resp.body.status.should.be.a('string');
-    resp.body.status.should.equal('error');
-    resp.body.should.haveOwnProperty('error');
-    resp.body.error.should.be.a('string');
-    resp.body.error.should.equal(
-      'Please enter a valid bus id. The bus_id format shoud be "uuid version 4"',
-    );
-  });
-
-  it('should fail to create a trip: "Invalid origin error"', async () => {
-    let bus_id;
-    let newTrip;
-    try {
-      const results = await pool.query('SELECT * FROM buses');
-      bus_id = await results.rows[0].id;
-      newTrip = await {
-        token: adminToken,
-        bus_id,
-        origin: 5670,
-        destination: 'Heaven',
-        fare: 7000,
-      };
-    } catch (e) {
-      return console.error(e);
-    }
-
-    const resp = await request(app)
-      .post('/api/v1/trips')
-      .send(newTrip);
-
-    resp.status.should.equal(400);
-    resp.body.should.haveOwnProperty('status');
-    resp.body.status.should.be.a('string');
-    resp.body.status.should.equal('error');
-    resp.body.should.haveOwnProperty('error');
-    resp.body.error.should.be.a('string');
-    resp.body.error.should.equal(
-      'Please enter the  origin. It should be alphanumerical with least 2 or at most 30 characters',
-    );
-  });
-
-  it('should fail to create a trip: "Invalid destination error"', async () => {
-    let bus_id;
-    let newTrip;
-    try {
-      const results = await pool.query('SELECT * FROM buses');
-      bus_id = await results.rows[0].id;
-      newTrip = await {
-        token: adminToken,
-        bus_id,
-        destination: 5670,
-        origin: 'Heaven',
-        fare: 7000,
-      };
-    } catch (e) {
-      return console.error(e);
-    }
-
-    const resp = await request(app)
-      .post('/api/v1/trips')
-      .send(newTrip);
-
-    resp.status.should.equal(400);
-    resp.body.should.haveOwnProperty('status');
-    resp.body.status.should.be.a('string');
-    resp.body.status.should.equal('error');
-    resp.body.should.haveOwnProperty('error');
-    resp.body.error.should.be.a('string');
-    resp.body.error.should.equal(
-      'Please enter the  destination. It should be alphanumerical with at least 2 or at most 30 characters',
-    );
-  });
-
-  it('should fail to create a trip: "Invalid fare error"', async () => {
-    let bus_id;
-    let newTrip;
-    try {
-      const results = await pool.query('SELECT * FROM buses');
-      bus_id = await results.rows[0].id;
-      newTrip = await {
-        token: adminToken,
-        bus_id,
-        destination: 'Hell',
-        origin: 'Heaven',
-        fare: 150,
-      };
-    } catch (e) {
-      return console.error(e);
-    }
-
-    const resp = await request(app)
-      .post('/api/v1/trips')
-      .send(newTrip);
-
-    resp.status.should.equal(400);
-    resp.body.should.haveOwnProperty('status');
-    resp.body.status.should.be.a('string');
-    resp.body.status.should.equal('error');
-    resp.body.should.haveOwnProperty('error');
-    resp.body.error.should.be.a('string');
-    resp.body.error.should.equal('Please enter the fare. It should be at least 500');
-  }); */
 });
