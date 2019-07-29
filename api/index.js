@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import routes from './routes';
 import { resSuccess, resNull } from './utility/response';
 import { log } from './utility';
-import { nodeEnv, port} from './config';
+import { port } from './config';
 
 const app = express();
 app.use(morgan('dev'));
@@ -15,9 +15,7 @@ app.use(bodyparser.json());
 app.use('/api/v1', routes);
 
 // Home page route
-app.get('/api/v1', (req, res) => {
-  return resSuccess(res, 200, { message: 'Welcome to Wayfarer' });
-});
+app.get('/api/v1', (req, res) => resSuccess(res, 200, { message: 'Welcome to Wayfarer' }));
 
 app.disable('x-powered-by');
 

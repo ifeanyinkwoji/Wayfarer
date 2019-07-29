@@ -5,6 +5,7 @@ import moment from 'moment';
 import assert from 'assert';
 import request from 'supertest';
 import { pool } from '../model';
+import { log } from '../utility';
 
 import app from '..';
 import {
@@ -490,7 +491,10 @@ describe('GET /trips', () => {
 
   describe('GET /trips: No available trip error', () => {
     before((done) => {
-      pool.query('TRUNCATE ONLY trips RESTART IDENTITY CASCADE');
+      pool.query('TRUNCATE ONLY trips RESTART IDENTITY CASCADE', (err, res) => {
+        if (err) console.error(err);
+        if (res) console.log('Truncation is successful.');
+      });
       done();
     });
     it('should return an error if no trips are available', (done) => {
