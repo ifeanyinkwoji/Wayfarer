@@ -1,15 +1,16 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import config from '../config';
+import { config } from 'dotenv';
+import { jwtKey } from '../config';
 
-const { jwtKey } = config;
+config();
 
 class Auth {
   /**
    * @param {string} password password string to be hashed
    */
   static hash(password) {
-    return bcrypt.hashSync(password, bcrypt.genSaltSync(10));
+    return bcrypt.hashSync(password, bcrypt.genSaltSync(8));
   }
 
   /**
@@ -27,7 +28,7 @@ class Auth {
    * @param {string} duration token expiry time
    * @returns {string} Access token
    */
-  static generateToken(payload, secret = jwtKey, duration = '5d') {
+  static generateToken(payload, secret = jwtKey, duration = '7d') {
     return jwt.sign(payload, secret, { expiresIn: duration });
   }
 
@@ -42,4 +43,4 @@ class Auth {
   }
 }
 
-module.exports = Auth;
+export default Auth;

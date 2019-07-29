@@ -1,14 +1,18 @@
-import { Pool } from 'pg';
-import config from '../config';
+import { Pool, types } from 'pg';
+import { dbUrl, nodeEnv } from '../config';
+import log from '../utility/log';
 
-const { dbUrl } = config;
+require('custom-env').env(true);
+
+types.setTypeParser(1700, value => parseFloat(value));
+log(nodeEnv);
 
 const pool = new Pool({
   connectionString: dbUrl,
 });
 
 pool.on('connect', () => {
-  console.log('Connection to the database is successful');
+  log(`Connection successful to ${nodeEnv} database`);
 });
 
 class Model {
@@ -16,13 +20,13 @@ class Model {
     this.table = table;
     this.pool = pool;
     this.pool.on('error', (err) => {
-      console.log('Unexpected error on idle client', err);
+      log('Error: Idle client', err);
       process.exit(-1);
     });
   }
 
-  async select(columns, clause) {
-    const query = `SELECT ${columns} FROM ${this.table} ${clause};`;
+  async select(columns, clause = '') {
+    const query = `SELECT ${columns} FROM ${this.table} ${clause}`;
     const data = await this.pool.query(query);
     return data.rows;
   }
@@ -46,4 +50,4 @@ class Model {
   }
 }
 
-module.exports = { pool, Model };
+export { pool, Model };

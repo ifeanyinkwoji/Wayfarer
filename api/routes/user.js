@@ -1,17 +1,15 @@
-import express from 'express';
+import { Router } from 'express';
 import Users from '../controller/user';
 
-const router = express.Router();
+const router = Router();
 
-/**
- * User can signup
- */
-router.post('/auth/signup', Users.signUp);
+// Import controller
+const { signUp, signIn } = Users;
 
-/**
- * User can signin
- */
-router.post('/auth/signin', Users.signIn);
+// New User Signup
+router.post('/signup', signUp);
 
+// User signin
+router.post('/signin', signIn);
 
-module.exports = router;
+export default router;

@@ -1,5 +1,7 @@
-import jwt from 'jsonwebtoken';
-import Auth from '../utility';
+import { Auth } from '../utility';
+import { resUnauthorized, resForbidden } from '../utility/response';
+
+const { verifyToken } = Auth;
 
 /**
  * @description User Authorization
@@ -7,57 +9,43 @@ import Auth from '../utility';
  */
 class Authorization {
   /**
-   * @description Checks if user is admin and has a valid token
-   *              to access admin endpoints
+   * @description Confirms that a user is an admin an has a valid admin token
    * @param {object} req request object
    * @param {object} res response object
-   * @returns {boolean} returns true or false for admin verification
    */
   static verifyAdmin(req, res, next) {
     try {
-      const { token } = req.body;
-      const decoded = Auth.verifyToken(token);
-      if (!decoded.is_admin) {
-        return res.status(403).json({
-          status: 'error',
-          error: 'Access denied',
-        });
+      const token = req.get('Authorization').replace('Bearer ', '');
+      const decoded = verifyToken(token);
+      const { is_admin } = decoded;
+      if (!is_admin) {
+        return resForbidden(res, 'Access denied');
       }
       return next();
     } catch (error) {
-      return res.status(401).json({
-        status: 'error',
-        error: 'Invalid token',
-      });
+      return resUnauthorized(res, 'Invalid token');
     }
   }
 
   /**
-   * @description Checks if user is signed in and has a valid token
-   *              to access user endpoints
+   * @description Verifies if user is signed in and has a valid token
+   * to access user resources
    * @param {object} req request object
    * @param {object} res response object
-   * @returns {boolean} returns true or false for user verification
    */
-  static async verifyUser(req, res, next) {
+  static verifyUser(req, res, next) {
     try {
-      const { token } = req.body;
-      const decoded = await Auth.verifyToken(token);
+      const token = req.get('Authorization').replace('Bearer ', '');
+      const decoded = verifyToken(token);
       req.user = decoded;
-      if (!decoded.id) {
-        return res.status(403).json({
-          status: 'error',
-          error: 'Access denied',
-        });
+      if (!req.user.id) {
+        return resForbidden(res, 'Access denied');
       }
       return next();
     } catch (error) {
-      return res.status(401).json({
-        status: 'error',
-        error: 'Invalid token',
-      });
+      return resUnauthorized(res, 'Invalid token or none provided');
     }
   }
 }
 
-module.exports = Authorization;
+export default Authorization;

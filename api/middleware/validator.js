@@ -1,14 +1,14 @@
 import joiBase from '@hapi/joi';
+import { jwtKey } from '../config';
 
 const joi = joiBase.extend(require('joi-jwt'));
-const config = require('../config');
 
-module.exports = {
+class Validator {
   /**
    * @description Validates all fields in signup request body
    * @param {user} object
    */
-  signupValidator(user) {
+  static signupValidator(user) {
     const schema = joi.object().keys({
       email: joi
         .string()
@@ -22,10 +22,10 @@ Example 1: "orlando@gmail.com"`,
       first_name: joi
         .string()
         .trim()
-        .regex(/^[A-Z]+$/)
+        .alphanum()
         .uppercase()
         .required()
-        .error(() => 'first name can only consist of alphabets'),
+        .error(() => 'Enter firstname. It must be alphanumerical'),
       last_name: joi
         .string()
         .trim()
@@ -49,13 +49,13 @@ Example: Oglocke245`,
     });
 
     return joi.validate(user, schema, { abortEarly: false });
-  },
+  }
 
   /**
    * @description Validates all fields in signup request body
    * @param {user} object
    */
-  signinValidator(user) {
+  static signinValidator(user) {
     const schema = joi.object().keys({
       email: joi
         .string()
@@ -73,36 +73,39 @@ Example 1: "orlando@gmail.com"`,
         .error(() => 'Please Input your password!'),
     });
 
-    return joi.validate(user, schema, { abortEarly: true });
-  },
+    return joi.validate(user, schema, { abortEarly: false });
+  }
 
-  tripValidator(trip) {
+  static tripValidator(trip) {
     const schema = joi.object().keys({
       bus_id: joi
-        .string()
-        .trim()
+        .number()
+        .integer()
+        .min(1)
+        .max(5)
         .required()
-        .guid({ version: 'uuidv4' })
-        .error(() => 'Please enter a valid bus id. The bus_id format shoud be "uuid version 4"'),
+        .error(
+          () => 'Please enter a valid bus id. The bus_id should be an integer between 1 and "number of buses" inclusive.',
+        ),
       origin: joi
         .string()
         .trim()
-        .alphanum()
+        .regex(/^[a-zA-Z0-9\s,'-]*$/)
         .min(2)
         .max(30)
         .required()
         .error(
-          () => 'Please enter the  origin. It should be alphanumerical with least 2 or at most 30 characters',
+          () => 'Please enter the  origin. It should be at least 2 or at most 30 characters',
         ),
       destination: joi
         .string()
         .trim()
-        .alphanum()
+        .regex(/^[a-zA-Z0-9\s,'-]*$/)
         .min(2)
         .max(30)
         .required()
         .error(
-          () => 'Please enter the  destination. It should be alphanumerical with at least 2 or at most 30 characters',
+          () => 'Please enter the  destination. It should be at least 2 or at most 30 characters',
         ),
       fare: joi
         .number()
@@ -111,42 +114,71 @@ Example 1: "orlando@gmail.com"`,
         .error(() => 'Please enter the fare. It should be at least 500'),
       token: joi
         .jwt()
-        .valid({ secret: config.jwtKey })
-        .required()
+        .valid({ secret: jwtKey })
         .error(() => 'Please enter a valid admin token'),
     });
 
     return joi.validate(trip, schema, { abortEarly: false });
-  },
+  }
 
-  bookTripValidator(trip) {
+  static bookTripValidator(trip) {
     const schema = joi.object().keys({
       trip_id: joi
-        .string()
-        .trim()
+        .number()
+        .integer()
+        .min(1)
         .required()
-        .guid({ version: 'uuidv4' })
-        .error(() => 'Please enter a valid trip id. The trip_id format shoud be "uuid version 4"'),
+        .error(
+          () => 'Please enter a valid bus id. The trip_id should be an integer that equals 1 or is greater.',
+        ),
       seat_number: joi
         .number()
         .integer()
-        .required()
+        .min(1)
         .error(
-          () => 'Please enter the  seat number',
+          () => 'Please enter the  seat number. The seat number should be an integer that equals 1 or is greater.',
+        ),
+      user_id: joi
+        .number()
+        .integer()
+        .min(1)
+        .error(
+          () => 'Please enter the  user id. The user id should be an integer that equals 1 or is greater.',
         ),
       token: joi
         .jwt()
-        .valid({ secret: config.jwtKey })
-        .required()
+        .valid({ secret: jwtKey })
         .error(() => 'Please enter a valid admin token'),
-      user_id: joi
-        .string()
-        .trim()
-        .required()
-        .guid({ version: 'uuidv4' })
-        .error(() => 'Please enter a valid user id. The user_id format shoud be "uuid version 4"'),
+      is_admin: joi
+        .boolean()
+        .invalid(false)
+        .error(() => 'Access Denied. You do not have the proper authorization'),
     });
 
     return joi.validate(trip, schema, { abortEarly: false });
-  },
-};
+  }
+
+  static getTripValidator(trip) {
+    const schema = joi.object().keys({
+      user_id: joi
+        .number()
+        .integer()
+        .min(1)
+        .error(
+          () => 'Please enter the  user id. The user id should be an integer that equals 1 or is greater.',
+        ),
+      token: joi
+        .jwt()
+        .valid({ secret: jwtKey })
+        .error(() => 'Please enter a valid admin token'),
+      is_admin: joi
+        .boolean()
+        .invalid(false)
+        .error(() => 'Access Denied. You do not have the proper authorization'),
+    });
+
+    return joi.validate(trip, schema, { abortEarly: false });
+  }
+}
+
+export default Validator;

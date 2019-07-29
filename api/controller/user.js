@@ -1,10 +1,19 @@
-import Auth from '../utility';
-import model from '../model';
-import validator from '../middleware/validator';
+import { Model } from '../model';
+import { Auth } from '../utility';
+import {
+  resConflict,
+  resInternalServer,
+  resUnauthorized,
+  resSuccess,
+  resBadRequest,
+} from '../utility/response';
+import Validate from '../middleware/validator';
+
+const { signinValidator, signupValidator } = Validate;
 
 class Users {
   static Model() {
-    return new model.Model('users');
+    return new Model('users');
   }
 
   /**
@@ -14,19 +23,18 @@ class Users {
    * @returns {object}  JSON response
    */
   static async signUp(req, res) {
-    const { error } = validator.signupValidator(req.body);
+    const { error } = signupValidator(req.body);
     if (error) {
-      return res.status(400).json({
-        status: 'error',
-        error: error.details[0].message,
-      });
+      const errMessage = error.details.map(err => `${err.path}: ${err.message}`).join('\n');
+      return resBadRequest(res, errMessage);
     }
+
     const {
       first_name, last_name, email, password,
     } = req.body;
-    const hashedP = Auth.hash(password);
+    const hashedPassword = Auth.hash(password);
     const columns = 'first_name, last_name, email, password';
-    const values = `'${first_name}', '${last_name}', '${email}', '${hashedP}'`;
+    const values = `'${first_name}', '${last_name}', '${email}', '${hashedPassword}'`;
     const clause = 'RETURNING id, first_name, last_name, email, is_admin';
 
     try {
@@ -35,90 +43,47 @@ class Users {
       const token = Auth.generateToken({
         id,
         email,
+        first_name,
+        last_name,
         is_admin,
       });
-
-      return res.status(201).json({
-        status: 'success',
-        data: {
-          token,
-          id,
-          email,
-          first_name,
-          last_name,
-          is_admin,
-        },
-      });
-    } catch (err) {
-      if (err.routine === '_bt_check_unique') {
-        return res.status(409).json({
-          status: 'error',
-          error: `A user has already registered with this email!
-Please use another email`,
-        });
+      return resSuccess(res, 201, { token, ...data[0] });
+    } catch (errr) {
+      if (errr.routine === '_bt_check_unique') {
+        return resConflict(res, 'A user with this email already exists');
       }
-      return res.status(500).json({
-        status: 'error',
-        error: 'Internal server error',
-      });
+      return resInternalServer(res);
     }
   }
 
   static async signIn(req, res) {
-    const { error } = validator.signinValidator(req.body);
+    const { error } = signinValidator(req.body);
     if (error) {
-      return res.status(400).json({
-        status: 'error',
-        error: error.details[0].message,
-      });
+      const errMessage = error.details.map(err => `${err.path}: ${err.message}`).join('\n');
+      return resBadRequest(res, errMessage);
     }
+
     const { email, password } = req.body;
-    const columns = 'id, email, password, is_admin';
+    const columns = 'id, email, first_name, last_name, password, is_admin';
     const clause = `WHERE email='${email}'`;
     try {
       const data = await Users.Model().select(columns, clause);
-      if (!data[0]) {
-        return res.status(401).json({
-          status: 'error',
-          error: 'Unauthorized access!',
-        });
-      }
+      if (!data[0]) return resUnauthorized(res, 'Invalid Signin Details');
       if (!Auth.compare(password, data[0].password)) {
-        return res.status(401).json({
-          status: 'error',
-          error: 'Unauthorized access!',
-        });
+        return resUnauthorized(res, 'Invalid Signin Details');
       }
       const {
-        id, email, first_name, last_name, is_admin,
+        id, is_admin, first_name, last_name,
       } = data[0];
-
-      const token = Auth.generateToken({
-        id,
-        email,
-        is_admin,
-      });
-
-
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          token,
-          id,
-          email,
-          first_name,
-          last_name,
-          is_admin,
-        },
-      });
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({
-        status: 'error',
-        error: 'Internal server error',
-      });
+      const output = {
+        id, email, first_name, last_name, is_admin,
+      };
+      const token = Auth.generateToken({ ...output });
+      return resSuccess(res, 200, { token, ...output });
+    } catch (errs) {
+      return resInternalServer(res);
     }
   }
 }
 
-module.exports = Users;
+export default Users;
