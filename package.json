@@ -6,14 +6,14 @@
   "scripts": {
     "start:dev": "set DEBUG=dev && cross-env NODE_ENV=dev babel-watch ./api/index.js",
     "test": "cross-env NODE_ENV=test npm run migrate:seed && cross-env NODE_ENV=test nyc --reporter=text mocha --timeout 30000 -c ./api/test --require @babel/register --exit",
-    "nyc": "nyc --reporter=lcov npm test && nyc report --reporter=text-lcov | coveralls",
+    "nyc": "nyc --reporter=lcov npm test && nyc report --reporter=text-lcov ",
     "migrate": "set DEBUG=dev && babel-node ./api/schema/migration",
     "heroku:migrate": "node ./build/schema/migration",
     "seed": "set DEBUG=dev && babel-node ./api/schema/seed",
     "heroku:seed": "node ./build/schema/seed",
     "migrate:seed": "set DEBUG=dev && npm run migrate && npm run seed",
     "build": "babel api --out-dir build",
-    "start": "set DEBUG=dev && node ./build/index.js"
+    "start": "set DEBUG=dev && node ./build/index.js
   },
   "keywords": [],
   "author": "Ifeanyi Nkwoji",
